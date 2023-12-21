@@ -4,7 +4,9 @@ from datetime import datetime, timedelta
 from airflow.models import DAG
 import random
 from airflow.operators.python_operator import PythonOperator
-
+import requests
+import json
+import pandas as pd
 
 # start_dt = '''{{ (execution_date + macros.timedelta(days=-92)).strftime('%Y-%m-%d') }}'''
 end_dt = '''{{ (execution_date + macros.timedelta(days=-1)).strftime('%Y-%m-%d') }}'''
@@ -22,36 +24,41 @@ default_args = {
 }
 
 def my_function(x):
-    print("%%%%%%%%%%%%%%%%%%%%%%%%")
-    print(end_dt)
-# def return_branch(**kwargs):
-#     branches = ['branch_0']
-#     return random.choice(branches)
+    response=requests.get("https://health.data.ny.gov/api/views/xdss-u53e/rows.json?accessType=DOWNLOAD")
+    data=json.loads(response.content)
+    Test_Date=[]
+    New_Positives=[]
+    Cumulative_Number_of_Positives=[]
+    Total_Number_of_Tests_Performed=[]
+    Cumulative_Number_of_Tests_Performed=[]
+    Load_date=[]
+    countries=[]
+    for d in data.get("data"):
+        Test_Date.append(d[8])
+        countries.append(d[9])
+        New_Positives.append(d[10])
+        Cumulative_Number_of_Positives.append(d[11])
+        Total_Number_of_Tests_Performed.append(d[12])
+        Cumulative_Number_of_Tests_Performed.append(d[13])
+    #     Load_date.appeend()
+
+    import pandas as pd
+    df=pd.DataFrame()
+    df["Test_Date"]=Test_Date
+    df["New_Positives"]=New_Positives
+    df["Cumulative_Number_of_Positives"]=Cumulative_Number_of_Positives
+    df["Total_Number_of_Tests_Performed"]=Total_Number_of_Tests_Performed
+    df["Cumulative_Number_of_Tests_Performed"]=Cumulative_Number_of_Tests_Performed
+    df["countries"]=countries
+    for g in df.groupby(['countries']):
+        print(g[1])
+#     engine = create_engine('postgresql://brent:password@localhost:5432/db')
+#     g[1].to_sql(str(g[0]), engine)
 
 
 
-# with DAG("branch_operator_guide", default_args=default_args, schedule_interval=None) as dag:
-#     kick_off_dag = DummyOperator(task_id='run_this_first')
 
-#     branching = BranchPythonOperator(
-#         task_id='branching',
-#         python_callable=return_branch,
-#         provide_context=True)
-
-#     kick_off_dag >> branching
-#     count=0
-#     for i in range(0, 4):
-#         d = DummyOperator(task_id='branch_{0}'.format(i))
-#         for j in range(0, 3):
-#             m = DummyOperator(task_id='branch_{0}_{1}'.format(i, j))
-#             for k in range(0,3):
-#                 n=DummyOperator(task_id='branch_{0}_{1}_{2}'.format(i,j,k))
-#                 d >> m >>n
-#         branching >> d
-
-
-
-dag = DAG("test2", catchup=True, default_args=default_args )
+dag = DAG("test", catchup=True, default_args=default_args )
 
 
 # def exec_backfill_script(start_date,end_date):
